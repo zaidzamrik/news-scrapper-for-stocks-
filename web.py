@@ -22,6 +22,13 @@ app = FastAPI(title="Stock Research Assistant", version="1.0")
 logger = setup_logger("stock_research_web", os.getenv("LOG_LEVEL", "ERROR"))
 
 
+@app.get("/")
+def root() -> Dict[str, str]:
+    return {
+        "message": "Stock Research Assistant is running. Try /health, /docs, or /analyze?ticker=AAPL"
+    }
+
+
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
@@ -80,4 +87,3 @@ def analyze(
         # Keep error surface small for beginners; details are in logs.
         logger.exception("Analyze failed")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}") from exc
-
