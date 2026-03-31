@@ -1,8 +1,3 @@
-"""FastAPI web service wrapper around the existing CLI analysis pipeline.
-
-This does not change the underlying analysis logic; it only exposes it over HTTP.
-"""
-
 from __future__ import annotations
 
 import os
