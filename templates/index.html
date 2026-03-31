@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock Research Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Stock Research Assistant</p>
+        <h1>Simple stock research insights</h1>
+        <p class="subhead">Clear, beginner-friendly signals from news and price trends.</p>
+      </header>
+
+      <section class="panel">
+        <form id="analyzeForm" class="input-row">
+          <div class="input-wrap">
+            <label for="tickerInput">Enter stock ticker</label>
+            <input
+              id="tickerInput"
+              name="ticker"
+              type="text"
+              placeholder="AAPL"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="helper">Tip: Use a ticker for best results (e.g., AAPL).</p>
+          </div>
+          <button id="analyzeButton" type="submit">Analyze</button>
+        </form>
+
+        <div id="status" class="status" aria-live="polite"></div>
+      </section>
+
+      <section id="resultCard" class="result-card hidden" aria-live="polite">
+        <div class="result-top">
+          <div>
+            <p class="result-ticker" id="resultTicker">Ticker</p>
+            <p class="result-date" id="resultDate">Date</p>
+          </div>
+          <span id="resultSignal" class="signal-badge">HOLD</span>
+        </div>
+
+        <div class="result-section">
+          <h3>Why</h3>
+          <ul id="resultWhy"></ul>
+        </div>
+
+        <div class="result-section">
+          <h3>Plan</h3>
+          <div class="plan-list">
+            <p><strong>Buy:</strong> <span id="planBuy"></span></p>
+            <p><strong>Hold:</strong> <span id="planHold"></span></p>
+            <p><strong>Exit:</strong> <span id="planExit"></span></p>
+          </div>
+        </div>
+
+        <div class="result-section">
+          <h3>Risks</h3>
+          <ul id="resultRisks"></ul>
+        </div>
+
+        <p class="disclaimer" id="resultDisclaimer"></p>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

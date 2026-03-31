@@ -135,6 +135,30 @@ def generate_explanations(
 
 def build_simple_summary(report: Dict[str, Any]) -> str:
     """Build a beginner-friendly, short summary string."""
+    simple = build_simple_payload(report)
+    lines = [
+        f"Ticker: {simple['ticker']}",
+        f"Date: {simple['date']}",
+        f"Signal: {simple['signal']}",
+        "Why:",
+    ]
+    lines.extend([f"- {reason}" for reason in simple["why"]])
+    lines.extend(
+        [
+            "Plan:",
+            f"Buy: {simple['plan']['buy']}",
+            f"Hold: {simple['plan']['hold']}",
+            f"Exit: {simple['plan']['exit']}",
+            "Risks:",
+        ]
+    )
+    lines.extend([f"- {risk}" for risk in simple["risks"]])
+    lines.append(simple["disclaimer"])
+    return "\n".join(lines)
+
+
+def build_simple_payload(report: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a structured beginner-friendly summary payload."""
     ticker = report.get("ticker", "N/A")
     generated_at = report.get("generated_at", "")
     date = generated_at.split("T")[0] if generated_at else ""
@@ -195,25 +219,21 @@ def build_simple_summary(report: Dict[str, Any]) -> str:
         risks.append("Unexpected news could change the outlook")
     risks = risks[:2]
 
-    lines = [
-        f"Ticker: {ticker}",
-        f"Date: {date}",
-        f"Signal: {signal}",
-        "Why:",
-    ]
-    lines.extend([f"- {reason}" for reason in reasons])
-    lines.extend(
-        [
-            "Plan:",
-            "Buy: wait for strength to build",
-            "Hold: stay in only if trend is stable",
-            "Exit: step aside if news or trend worsens",
-            "Risks:",
-        ]
-    )
-    lines.extend([f"- {risk}" for risk in risks])
-    lines.append(DISCLAIMER)
-    return "\n".join(lines)
+    plan = {
+        "buy": "wait for strength to build",
+        "hold": "stay in only if trend is stable",
+        "exit": "step aside if news or trend worsens",
+    }
+
+    return {
+        "ticker": ticker,
+        "date": date,
+        "signal": signal,
+        "why": reasons,
+        "plan": plan,
+        "risks": risks,
+        "disclaimer": DISCLAIMER,
+    }
 
 
 def print_report(report: Dict[str, Any]) -> None:
