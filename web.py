@@ -5,11 +5,11 @@ This does not change the underlying analysis logic; it only exposes it over HTTP
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -26,6 +26,48 @@ app = FastAPI(title="Stock Research Assistant", version="1.0")
 logger = setup_logger("stock_research_web", os.getenv("LOG_LEVEL", "ERROR"))
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+try:  # Optional: used only to convert non-JSON-native scalars.
+    import numpy as np  # type: ignore
+except Exception:  # pragma: no cover
+    np = None  # type: ignore
+
+try:  # Optional: used only to convert Timestamp-like values.
+    import pandas as pd  # type: ignore
+except Exception:  # pragma: no cover
+    pd = None  # type: ignore
+
+
+def _json_sanitize(value: Any) -> Any:
+    """Convert common non-JSON-native types (numpy/pandas/datetime) into JSON-safe primitives."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+
+    if isinstance(value, dt.datetime):
+        return value.isoformat()
+
+    if isinstance(value, dict):
+        return {str(key): _json_sanitize(val) for key, val in value.items()}
+
+    if isinstance(value, (list, tuple, set)):
+        return [_json_sanitize(item) for item in value]
+
+    if np is not None:
+        try:
+            if isinstance(value, np.generic):
+                return _json_sanitize(value.item())
+        except Exception:
+            pass
+
+    if pd is not None:
+        try:
+            if isinstance(value, pd.Timestamp):
+                return value.isoformat()
+        except Exception:
+            pass
+
+    # Last resort: stringify unknown objects instead of failing the whole request.
+    return str(value)
 
 
 @app.get("/")
@@ -87,8 +129,7 @@ def analyze(
         }
         if simple:
             payload["summary_text"] = build_simple_summary(report)
-        # Ensure numpy/pandas scalar types (and any other non-JSON-native values) are encoded safely.
-        return jsonable_encoder(payload)
+        return _json_sanitize(payload)
     except Exception as exc:
         logger.exception("Analyze failed")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}") from exc
