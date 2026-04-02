@@ -31,9 +31,9 @@ WEIGHT_PROFILES = {
 }
 
 THRESHOLDS = {
-    "conservative": {"buy": 70, "hold": 50},
-    "moderate": {"buy": 65, "hold": 45},
-    "aggressive": {"buy": 60, "hold": 40},
+    "conservative": {"buy": 66, "hold": 51},
+    "moderate": {"buy": 60, "hold": 45},
+    "aggressive": {"buy": 56, "hold": 41},
 }
 
 
@@ -54,7 +54,8 @@ def compute_scores(
         "volume": _score_volume(technicals),
     }
 
-    total_norm = sum(component_scores[key] * weights[key] for key in component_scores)
+    available_weights = _available_weights(weights, news_summary)
+    total_norm = sum(component_scores[key] * available_weights[key] for key in component_scores)
     total_score = round((total_norm + 1) * 50, 2)
 
     thresholds = THRESHOLDS.get(risk_profile, THRESHOLDS["moderate"])
@@ -68,6 +69,7 @@ def compute_scores(
     return {
         "risk_profile": risk_profile,
         "weights": weights,
+        "effective_weights": available_weights,
         "component_scores": component_scores,
         "component_scores_100": {key: round((val + 1) * 50, 2) for key, val in component_scores.items()},
         "total_score": total_score,
@@ -90,6 +92,16 @@ def _score_trend(technicals: Dict[str, Any]) -> float:
         "bearish": -0.7,
     }.get(regime, 0.0)
     strength = safe_float((technicals or {}).get("trend_strength", 0.0))
+    close = safe_float((technicals or {}).get("last_close", 0.0))
+    sma_20 = safe_float((technicals or {}).get("sma_20", 0.0))
+    sma_50 = safe_float((technicals or {}).get("sma_50", 0.0))
+    sma_200 = safe_float((technicals or {}).get("sma_200", 0.0))
+
+    if close > sma_20 > 0 and close > sma_200 and sma_50 > sma_200:
+        base += 0.35
+    elif close < sma_20 and close < sma_200 and sma_50 < sma_200:
+        base -= 0.35
+
     return clamp(base + strength * 1.5, -1.0, 1.0)
 
 
@@ -120,4 +132,22 @@ def _score_volatility(technicals: Dict[str, Any]) -> float:
 
 def _score_volume(technicals: Dict[str, Any]) -> float:
     volume_ratio = safe_float((technicals or {}).get("volume_ratio", 1.0))
-    return clamp((volume_ratio - 1.0) / 0.4, -1.0, 1.0)
+    return clamp((volume_ratio - 0.85) / 0.6, -0.5, 1.0)
+
+
+def _available_weights(weights: Dict[str, float], news_summary: Dict[str, Any]) -> Dict[str, float]:
+    """Renormalize weights when news is unavailable so missing articles do not mute the signal."""
+    has_news = bool(
+        news_summary
+        and any(
+            safe_float(news_summary.get(window, {}).get("count", 0.0)) > 0
+            for window in ("1d", "7d", "30d")
+        )
+    )
+    effective = dict(weights)
+    if has_news:
+        return effective
+
+    effective["news"] = 0.0
+    total = sum(effective.values()) or 1.0
+    return {key: value / total for key, value in effective.items()}

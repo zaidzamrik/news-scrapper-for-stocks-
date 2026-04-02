@@ -173,6 +173,9 @@ def build_simple_payload(report: Dict[str, Any]) -> Dict[str, Any]:
 
     news_summary = report.get("news", {}).get("summary", {})
     technicals = report.get("technicals", {})
+    has_news = any(
+        safe_float(news_summary.get(window, {}).get("count", 0.0)) > 0 for window in ("1d", "7d", "30d")
+    )
 
     sentiment_7d = safe_float(news_summary.get("7d", {}).get("weighted_sentiment", 0.0))
     sentiment_1d = safe_float(news_summary.get("1d", {}).get("weighted_sentiment", 0.0))
@@ -182,12 +185,15 @@ def build_simple_payload(report: Dict[str, Any]) -> Dict[str, Any]:
     atr_pct = safe_float(technicals.get("atr_pct", 0.0))
 
     reasons: List[str] = []
-    if sentiment_7d > 0.2:
-        reasons.append("Positive recent news")
-    elif sentiment_7d < -0.2:
-        reasons.append("Negative recent news")
+    if has_news:
+        if sentiment_7d > 0.2:
+            reasons.append("Positive recent news")
+        elif sentiment_7d < -0.2:
+            reasons.append("Negative recent news")
+        else:
+            reasons.append("Mixed recent news")
     else:
-        reasons.append("Mixed recent news")
+        reasons.append("No recent news found")
 
     if regime == "bullish":
         reasons.append("Price trending up")
@@ -205,6 +211,8 @@ def build_simple_payload(report: Dict[str, Any]) -> Dict[str, Any]:
             reasons.append("Stock may be overbought")
         elif rsi < 30:
             reasons.append("Stock may be oversold")
+        elif not has_news:
+            reasons.append("Price action is doing most of the work")
 
     reasons = reasons[:3]
 
