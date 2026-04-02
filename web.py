@@ -9,6 +9,7 @@ import os
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -86,7 +87,8 @@ def analyze(
         }
         if simple:
             payload["summary_text"] = build_simple_summary(report)
-        return payload
+        # Ensure numpy/pandas scalar types (and any other non-JSON-native values) are encoded safely.
+        return jsonable_encoder(payload)
     except Exception as exc:
         logger.exception("Analyze failed")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}") from exc
