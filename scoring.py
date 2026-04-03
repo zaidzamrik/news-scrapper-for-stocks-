@@ -1,7 +1,7 @@
 """Scoring engine combining news sentiment and technical signals."""
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from utils import clamp, safe_float
 
@@ -59,12 +59,7 @@ def compute_scores(
     total_score = round((total_norm + 1) * 50, 2)
 
     thresholds = THRESHOLDS.get(risk_profile, THRESHOLDS["moderate"])
-    if total_score >= thresholds["buy"]:
-        opinion = "Buy Candidate"
-    elif total_score >= thresholds["hold"]:
-        opinion = "Hold/Monitor"
-    else:
-        opinion = "Avoid"
+    signal = _map_final_signal(total_score, thresholds, news_summary, technicals)
 
     return {
         "risk_profile": risk_profile,
@@ -73,7 +68,8 @@ def compute_scores(
         "component_scores": component_scores,
         "component_scores_100": {key: round((val + 1) * 50, 2) for key, val in component_scores.items()},
         "total_score": total_score,
-        "opinion": opinion,
+        "signal": signal,
+        "opinion": signal,
         "thresholds": thresholds,
     }
 
@@ -151,3 +147,42 @@ def _available_weights(weights: Dict[str, float], news_summary: Dict[str, Any]) 
     effective["news"] = 0.0
     total = sum(effective.values()) or 1.0
     return {key: value / total for key, value in effective.items()}
+
+
+def _map_final_signal(
+    total_score: float,
+    thresholds: Dict[str, float],
+    news_summary: Dict[str, Any],
+    technicals: Dict[str, Any],
+) -> str:
+    """Map the existing score and current conditions into beginner-friendly final signals."""
+    sentiment_7d = safe_float(news_summary.get("7d", {}).get("weighted_sentiment", 0.0))
+    trend_regime = (technicals or {}).get("trend_regime", "neutral")
+    support_break = bool((technicals or {}).get("support_break"))
+    bearish_divergence = bool((technicals or {}).get("bearish_divergence"))
+    return_20d = safe_float((technicals or {}).get("return_20d", 0.0))
+    volume_ratio = safe_float((technicals or {}).get("volume_ratio", 1.0))
+
+    exit_signal = (
+        total_score < max(thresholds["hold"] - 10, 0)
+        or support_break
+        or (trend_regime == "bearish" and sentiment_7d < -0.2)
+        or (bearish_divergence and return_20d < 0)
+    )
+    if exit_signal:
+        return "EXIT"
+
+    if total_score >= thresholds["buy"]:
+        return "BUY"
+
+    hold_signal = (
+        total_score >= thresholds["hold"]
+        and trend_regime != "bearish"
+        and not support_break
+        and sentiment_7d >= -0.2
+        and volume_ratio >= 0.65
+    )
+    if hold_signal:
+        return "HOLD"
+
+    return "DONT_BUY"

@@ -36,13 +36,15 @@ function renderList(element, items) {
 
 function updateSignalBadge(signal) {
   resultSignal.textContent = signal;
-  resultSignal.classList.remove("signal-buy", "signal-hold", "signal-avoid");
+  resultSignal.classList.remove("signal-buy", "signal-hold", "signal-exit", "signal-dont-buy");
   if (signal === "BUY") {
     resultSignal.classList.add("signal-buy");
   } else if (signal === "HOLD") {
     resultSignal.classList.add("signal-hold");
+  } else if (signal === "EXIT") {
+    resultSignal.classList.add("signal-exit");
   } else {
-    resultSignal.classList.add("signal-avoid");
+    resultSignal.classList.add("signal-dont-buy");
   }
 }
 
@@ -77,22 +79,20 @@ form.addEventListener("submit", async (event) => {
     }
 
     const data = await response.json();
-    if (!data || !data.simple) {
+    if (!data || !data.signal) {
       throw new Error("No result returned. Please try again.");
     }
 
-    const simple = data.simple;
+    resultTicker.textContent = data.ticker || tickerParam;
+    resultDate.textContent = data.date || "";
+    updateSignalBadge(data.signal || "DON'T BUY");
 
-    resultTicker.textContent = simple.ticker || tickerParam;
-    resultDate.textContent = simple.date || "";
-    updateSignalBadge(simple.signal || data.signal || "HOLD");
-
-    renderList(resultWhy, simple.why || []);
-    planBuy.textContent = simple.plan?.buy || "";
-    planHold.textContent = simple.plan?.hold || "";
-    planExit.textContent = simple.plan?.exit || "";
-    renderList(resultRisks, simple.risks || []);
-    resultDisclaimer.textContent = simple.disclaimer || "";
+    renderList(resultWhy, data.why || []);
+    planBuy.textContent = data.plan?.buy || "";
+    planHold.textContent = data.plan?.hold || "";
+    planExit.textContent = data.plan?.exit || "";
+    renderList(resultRisks, data.risks || []);
+    resultDisclaimer.textContent = data.disclaimer || "";
 
     resultCard.classList.remove("hidden");
     setStatus("");

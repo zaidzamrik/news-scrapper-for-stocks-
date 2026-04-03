@@ -182,13 +182,18 @@ button:disabled {
 }
 
 .signal-hold {
-  background: #fef3c7;
-  color: #92400e;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
-.signal-avoid {
+.signal-exit {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.signal-dont-buy {
+  background: #ffedd5;
+  color: #9a3412;
 }
 
 .result-section h3 {

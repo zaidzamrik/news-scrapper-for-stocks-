@@ -112,23 +112,7 @@ def analyze(
 
         scores = compute_scores(news_summary, technicals, risk_profile=risk_profile)
         report = build_report(ticker_norm, articles, news_summary, technicals, scores)
-
-        opinion = (report.get("opinion") or "").lower()
-        if "buy" in opinion:
-            signal = "BUY"
-        elif "hold" in opinion:
-            signal = "HOLD"
-        else:
-            signal = "AVOID"
-
-        payload: Dict[str, Any] = {
-            "ticker": ticker_norm,
-            "signal": signal,
-            "simple": build_simple_payload(report),
-            "report": report,
-        }
-        if simple:
-            payload["summary_text"] = build_simple_summary(report)
+        payload: Dict[str, Any] = build_simple_payload(report)
         return _json_sanitize(payload)
     except Exception as exc:
         logger.exception("Analyze failed")

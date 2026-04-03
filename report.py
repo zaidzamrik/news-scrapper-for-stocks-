@@ -38,7 +38,8 @@ def build_report(
     return {
         "ticker": ticker,
         "generated_at": today_utc().isoformat(),
-        "opinion": scoring.get("opinion"),
+        "signal": scoring.get("signal"),
+        "opinion": scoring.get("signal"),
         "score": scoring.get("total_score"),
         "risk_profile": scoring.get("risk_profile"),
         "thresholds": scoring.get("thresholds"),
@@ -163,13 +164,8 @@ def build_simple_payload(report: Dict[str, Any]) -> Dict[str, Any]:
     generated_at = report.get("generated_at", "")
     date = generated_at.split("T")[0] if generated_at else ""
 
-    opinion = (report.get("opinion") or "").lower()
-    if "buy" in opinion:
-        signal = "BUY"
-    elif "hold" in opinion:
-        signal = "HOLD"
-    else:
-        signal = "AVOID"
+    signal_key = report.get("signal") or report.get("opinion") or "DONT_BUY"
+    signal_display = "DON'T BUY" if signal_key == "DONT_BUY" else str(signal_key)
 
     news_summary = report.get("news", {}).get("summary", {})
     technicals = report.get("technicals", {})
@@ -183,64 +179,142 @@ def build_simple_payload(report: Dict[str, Any]) -> Dict[str, Any]:
     ret_20d = safe_float(technicals.get("return_20d", 0.0))
     rsi = safe_float(technicals.get("rsi_14", 50.0))
     atr_pct = safe_float(technicals.get("atr_pct", 0.0))
+    support_break = bool(technicals.get("support_break"))
+    bearish_divergence = bool(technicals.get("bearish_divergence"))
+    volume_ratio = safe_float(technicals.get("volume_ratio", 1.0))
 
-    reasons: List[str] = []
-    if has_news:
-        if sentiment_7d > 0.2:
-            reasons.append("Positive recent news")
-        elif sentiment_7d < -0.2:
-            reasons.append("Negative recent news")
-        else:
-            reasons.append("Mixed recent news")
-    else:
-        reasons.append("No recent news found")
-
-    if regime == "bullish":
-        reasons.append("Price trending up")
-    elif regime == "bearish":
-        reasons.append("Long-term trend is weak")
-    else:
-        reasons.append("Price trend is unclear")
-
-    if len(reasons) < 3:
-        if ret_20d > 0.05:
-            reasons.append("Momentum is improving")
-        elif ret_20d < -0.05:
-            reasons.append("Momentum is weakening")
-        elif rsi > 70:
-            reasons.append("Stock may be overbought")
-        elif rsi < 30:
-            reasons.append("Stock may be oversold")
-        elif not has_news:
-            reasons.append("Price action is doing most of the work")
-
-    reasons = reasons[:3]
-
-    risks: List[str] = []
-    if sentiment_1d < -0.4:
-        risks.append("Sudden negative news risk")
-    if technicals.get("support_break"):
-        risks.append("Price fell below a recent floor")
-    if atr_pct > 0.05 and len(risks) < 2:
-        risks.append("Price moves are volatile")
-    if not risks:
-        risks.append("Unexpected news could change the outlook")
-    risks = risks[:2]
-
-    plan = {
-        "buy": "wait for strength to build",
-        "hold": "stay in only if trend is stable",
-        "exit": "step aside if news or trend worsens",
-    }
+    reasons = _signal_reasons(
+        signal_key=signal_key,
+        has_news=has_news,
+        sentiment_7d=sentiment_7d,
+        regime=regime,
+        ret_20d=ret_20d,
+        rsi=rsi,
+        support_break=support_break,
+        bearish_divergence=bearish_divergence,
+    )
+    risks = _signal_risks(
+        signal_key=signal_key,
+        sentiment_1d=sentiment_1d,
+        atr_pct=atr_pct,
+        support_break=support_break,
+        volume_ratio=volume_ratio,
+        has_news=has_news,
+    )
+    plan = _signal_plan(signal_key)
 
     return {
         "ticker": ticker,
         "date": date,
-        "signal": signal,
+        "signal": signal_display,
         "why": reasons,
         "plan": plan,
         "risks": risks,
         "disclaimer": DISCLAIMER,
+    }
+
+
+def _signal_reasons(
+    signal_key: str,
+    has_news: bool,
+    sentiment_7d: float,
+    regime: str,
+    ret_20d: float,
+    rsi: float,
+    support_break: bool,
+    bearish_divergence: bool,
+) -> List[str]:
+    if signal_key == "BUY":
+        reasons: List[str] = []
+        if has_news and sentiment_7d > 0.2:
+            reasons.append("Positive recent news")
+        if regime == "bullish":
+            reasons.append("Trend looks strong")
+        if ret_20d > 0:
+            reasons.append("Good time to consider entry")
+        if not reasons:
+            reasons = ["Conditions look supportive", "Trend appears constructive", "Entry setup looks favorable"]
+        return reasons[:3]
+
+    if signal_key == "HOLD":
+        reasons = ["Stock remains stable", "No major warning signs", "Continue monitoring"]
+        if regime == "bearish":
+            reasons[0] = "Stock is under pressure"
+        elif regime == "bullish":
+            reasons[0] = "Trend still looks supportive"
+        return reasons[:3]
+
+    if signal_key == "EXIT":
+        reasons = ["Signals have weakened", "Risk appears elevated", "Conditions suggest caution"]
+        if support_break:
+            reasons[0] = "Price support has broken down"
+        elif bearish_divergence:
+            reasons[0] = "Momentum has started to fade"
+        elif sentiment_7d < -0.2:
+            reasons[0] = "Recent news has turned negative"
+        return reasons[:3]
+
+    reasons = ["Signals are currently mixed", "The timing does not look favorable for entry"]
+    if regime == "neutral":
+        reasons.append("Better to wait for clearer confirmation")
+    elif regime == "bearish":
+        reasons.append("Trend still looks uncertain")
+    elif rsi > 70:
+        reasons.append("The move may already be stretched")
+    else:
+        reasons.append("Better to wait for clearer confirmation")
+    return reasons[:3]
+
+
+def _signal_risks(
+    signal_key: str,
+    sentiment_1d: float,
+    atr_pct: float,
+    support_break: bool,
+    volume_ratio: float,
+    has_news: bool,
+) -> List[str]:
+    risks: List[str] = []
+    if signal_key == "EXIT":
+        risks.append("Further downside could follow")
+    if sentiment_1d < -0.4:
+        risks.append("Sudden negative news")
+    if support_break and len(risks) < 2:
+        risks.append("Short-term direction looks weak")
+    if atr_pct > 0.05 and len(risks) < 2:
+        risks.append("Market volatility")
+    if volume_ratio < 0.8 and len(risks) < 2:
+        risks.append("Conviction behind the move looks weak")
+    if not has_news and len(risks) < 2:
+        risks.append("News visibility is limited right now")
+    if not risks:
+        risks.append("Unclear short-term direction")
+    return risks[:2]
+
+
+def _signal_plan(signal_key: str) -> Dict[str, str]:
+    if signal_key == "BUY":
+        return {
+            "buy": "Consider entering while conditions stay supportive",
+            "hold": "If already owned, keep monitoring the trend",
+            "exit": "Exit if conditions weaken further",
+        }
+    if signal_key == "HOLD":
+        return {
+            "buy": "Wait for stronger confirmation before adding",
+            "hold": "If already owned, continue monitoring",
+            "exit": "Exit if conditions weaken further",
+        }
+    if signal_key == "EXIT":
+        return {
+            "buy": "Do not add until conditions improve",
+            "hold": "Holding here looks risky",
+            "exit": "Consider reducing or exiting now",
+        }
+    return {
+        "buy": "Wait for stronger confirmation",
+        "hold": "If already owned, continue monitoring",
+        "exit": "Exit if conditions weaken further",
     }
 
 
