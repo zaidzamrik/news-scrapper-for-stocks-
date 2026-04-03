@@ -70,9 +70,6 @@ def main() -> int:
         export_json(report, args.export_json)
         logger.info("Exported JSON report to %s", args.export_json)
 
-    # TODO: Add backtesting module hook to validate scoring model against historical outcomes.
-    # TODO: Integrate paper-trading workflow for simulated execution and tracking.
-
     return 0
 
 
