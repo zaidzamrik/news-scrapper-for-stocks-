@@ -79,20 +79,22 @@ form.addEventListener("submit", async (event) => {
     }
 
     const data = await response.json();
-    if (!data || !data.signal) {
+    const payload = data?.signal ? data : data?.simple;
+
+    if (!payload || !payload.signal) {
       throw new Error("No result returned. Please try again.");
     }
 
-    resultTicker.textContent = data.ticker || tickerParam;
-    resultDate.textContent = data.date || "";
-    updateSignalBadge(data.signal || "DON'T BUY");
+    resultTicker.textContent = payload.ticker || tickerParam;
+    resultDate.textContent = payload.date || "";
+    updateSignalBadge(payload.signal || "DON'T BUY");
 
-    renderList(resultWhy, data.why || []);
-    planBuy.textContent = data.plan?.buy || "";
-    planHold.textContent = data.plan?.hold || "";
-    planExit.textContent = data.plan?.exit || "";
-    renderList(resultRisks, data.risks || []);
-    resultDisclaimer.textContent = data.disclaimer || "";
+    renderList(resultWhy, payload.why || []);
+    planBuy.textContent = payload.plan?.buy || "";
+    planHold.textContent = payload.plan?.hold || "";
+    planExit.textContent = payload.plan?.exit || "";
+    renderList(resultRisks, payload.risks || []);
+    resultDisclaimer.textContent = payload.disclaimer || "";
 
     resultCard.classList.remove("hidden");
     setStatus("");
