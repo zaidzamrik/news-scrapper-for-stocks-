@@ -23,16 +23,17 @@
       <section class="panel">
         <form id="analyzeForm" class="input-row">
           <div class="input-wrap">
-            <label for="tickerInput">Enter stock ticker</label>
+            <label for="tickerInput">Enter stock ticker or company name</label>
             <input
               id="tickerInput"
               name="ticker"
               type="text"
-              placeholder="AAPL"
+              placeholder="AAPL or Apple"
               autocomplete="off"
               spellcheck="false"
             />
-            <p class="helper">Tip: Use a ticker for best results (e.g., AAPL).</p>
+            <div id="lookupResults" class="lookup-results hidden" role="listbox" aria-label="Stock suggestions"></div>
+            <p class="helper">Try a ticker like AAPL or a company name like Apple.</p>
           </div>
           <button id="analyzeButton" type="submit">Analyze</button>
         </form>

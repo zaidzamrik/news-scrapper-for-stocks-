@@ -14,9 +14,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from news_fetcher import fetch_news
-from report import build_report, build_simple_payload, build_simple_summary
+from report import build_report, build_simple_payload
 from scoring import compute_scores
 from sentiment import aggregate_sentiment, enrich_articles_with_sentiment
+from stock_lookup import resolve_security_input, search_securities
 from technicals import compute_indicators, fetch_market_data
 from utils import setup_logger
 
@@ -80,9 +81,19 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/lookup")
+def lookup(
+    query: str = Query(..., min_length=1, max_length=120, description="Ticker or company name"),
+    limit: int = Query(8, ge=1, le=20, description="Maximum number of suggestions"),
+) -> Dict[str, Any]:
+    """Return lightweight ticker/company suggestions for the input box."""
+    suggestions = search_securities(query, limit=limit, logger=logger)
+    return _json_sanitize({"query": query, "results": suggestions})
+
+
 @app.get("/analyze")
 def analyze(
-    ticker: str = Query(..., min_length=1, max_length=10, description="Stock ticker, e.g. AAPL"),
+    ticker: str = Query(..., min_length=1, max_length=120, description="Stock ticker or company name"),
     lookback_days: int = Query(365, ge=7, le=3650, description="Lookback window in days"),
     max_articles: int = Query(25, ge=0, le=100, description="Max number of news articles"),
     risk_profile: str = Query(
@@ -95,13 +106,15 @@ def analyze(
 ) -> Dict[str, Any]:
     """Run analysis and return JSON."""
     try:
-        ticker_norm = ticker.upper().strip()
+        resolution = resolve_security_input(ticker, logger=logger)
+        ticker_norm = resolution["ticker"]
+        resolved_company_name = company_name.strip() or resolution["company_name"]
 
         articles = fetch_news(
             ticker_norm,
             lookback_days=lookback_days,
             max_articles=max_articles,
-            company_name=company_name,
+            company_name=resolved_company_name,
             logger=logger,
         )
         articles = enrich_articles_with_sentiment(articles)
@@ -113,6 +126,8 @@ def analyze(
         scores = compute_scores(news_summary, technicals, risk_profile=risk_profile)
         report = build_report(ticker_norm, articles, news_summary, technicals, scores)
         payload: Dict[str, Any] = build_simple_payload(report)
+        payload["company_name"] = resolved_company_name
+        payload["resolved_from"] = resolution["matched"]
         return _json_sanitize(payload)
     except Exception as exc:
         logger.exception("Analyze failed")

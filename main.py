@@ -8,13 +8,14 @@ from news_fetcher import fetch_news
 from report import build_report, export_json, print_report
 from scoring import compute_scores
 from sentiment import aggregate_sentiment, enrich_articles_with_sentiment
+from stock_lookup import resolve_security_input
 from technicals import compute_indicators, fetch_market_data
 from utils import setup_logger
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Stock Research Assistant")
-    parser.add_argument("ticker", help="Stock ticker symbol, e.g. AAPL")
+    parser.add_argument("ticker", help="Stock ticker or company name, e.g. AAPL or Apple Inc.")
     parser.add_argument(
         "--lookback-days",
         type=int,
@@ -38,14 +39,16 @@ def main() -> int:
     args = parse_args()
     logger = setup_logger("stock_research", args.log_level)
 
-    ticker = args.ticker.upper().strip()
+    resolution = resolve_security_input(args.ticker, logger=logger)
+    ticker = resolution["ticker"]
+    company_name = args.company_name.strip() or resolution["company_name"]
     logger.info("Starting research for %s", ticker)
 
     articles = fetch_news(
         ticker,
         lookback_days=args.lookback_days,
         max_articles=args.max_articles,
-        company_name=args.company_name,
+        company_name=company_name,
         logger=logger,
     )
     articles = enrich_articles_with_sentiment(articles)
