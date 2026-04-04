@@ -1,4 +1,4 @@
-"""Lookup helpers for resolving stock names into tickers via the SEC company list."""
+"""helpes indicate tickers"""
 from __future__ import annotations
 
 import re
