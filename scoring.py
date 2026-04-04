@@ -184,5 +184,5 @@ def _map_final_signal(
     )
     if hold_signal:
         return "HOLD"
-
+        
     return "DONT_BUY"
