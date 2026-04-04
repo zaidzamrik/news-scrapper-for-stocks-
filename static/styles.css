@@ -153,6 +153,7 @@ button {
   border: none;
   border-radius: 14px;
   padding: 14px 20px;
+  min-height: 52px;
   background: var(--accent);
   color: white;
   font-weight: 600;
