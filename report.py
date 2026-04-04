@@ -321,8 +321,7 @@ def _signal_plan(signal_key: str) -> Dict[str, str]:
 def print_report(report: Dict[str, Any]) -> None:
     """Print the beginner-friendly summary report."""
     print(build_simple_summary(report))
-
-
+    
 def export_json(report: Dict[str, Any], path: str) -> None:
     """Export report to JSON file."""
     with open(path, "w", encoding="utf-8") as file:
