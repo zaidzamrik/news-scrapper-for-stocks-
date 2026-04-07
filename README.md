@@ -35,12 +35,12 @@ Features:
 - "vaderSentiment"
 - "requests"
 
-Data Sources
-This project uses live web data, mainly through APIs and structured public data sources:
-SEC company ticker list
-NewsAPI
-GDELT
-Yahoo Finance via yfinance
+Data Sources:
+-This project uses live web data, mainly through APIs and structured public data sources:
+-SEC company ticker list
+-NewsAPI
+-GDELT
+-Yahoo Finance via yfinance
 
 how to run this repositry with thorough stepes
 1.clone the repositry using your terminal
