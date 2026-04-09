@@ -1,4 +1,4 @@
-"""Utility helpers for the stock research assistant."""
+"""Utility helpers for the stock scrapper."""
 from __future__ import annotations
 
 import datetime as dt
