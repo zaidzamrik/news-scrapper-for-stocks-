@@ -1,4 +1,4 @@
-"""Scoring engine combining news sentiment and technical signals."""
+"""The scoring engine combining news sentiment and technical signals."""
 from __future__ import annotations
 
 from typing import Any, Dict
