@@ -1,4 +1,3 @@
-"""Report generation and console output."""
 from __future__ import annotations
 
 import json
