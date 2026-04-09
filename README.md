@@ -42,7 +42,7 @@ Data Sources:
 -GDELT
 -Yahoo Finance via yfinance
 
-how to run this repositry with thorough stepes
+Hhoow to run this repositry with thorough steps
 1.clone the repositry using your terminal
 -git clone https://github.com/zaidzamrik/news-scrapper-for-stocks-.git
 -then enter the using the repositry name
@@ -60,9 +60,20 @@ how to run this repositry with thorough stepes
 5.open using the enviroment ip
 -http://127.0.0.1:8000/
 
+How to run using as a CLI:
+-The tool can be run using a ticker or a company name.
+-To run as a CLI, instead of running a web app you just input the commands in your terminal.
+-Example with company name: python3 main.py AAPL
+-Example with custom options: python3 main.py AAPL --lookback-days 365 --max-articles 25 --risk-profile moderate
+
+
 Notes:
 -this is not financial advice.
+
 -This app is for research and educational use.
+
 -Missing news data can affect the final signal.
+
 -News coverage depends on provider availability and API access.
+
 -The recommendation system is simplified for beginner readability.
