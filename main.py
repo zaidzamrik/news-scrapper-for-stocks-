@@ -1,4 +1,4 @@
-"""Command-line entry point for the stock research assistant."""
+"""Command-line part for the stock research scrapper."""
 from __future__ import annotations
 
 import argparse
